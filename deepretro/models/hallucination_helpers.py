@@ -47,8 +47,10 @@ def build_ml_checker(clf: Any) -> Callable:
         valid = []
         for pathway in pathways:
             if isinstance(pathway, list):
+                normalized_pathway = pathway
                 reactants_smi = ".".join(pathway)
             else:
+                normalized_pathway = [pathway]
                 reactants_smi = pathway
 
             if not is_valid_smiles(reactants_smi):
@@ -56,7 +58,7 @@ def build_ml_checker(clf: Any) -> Callable:
 
             pred = clf.predict_single(product, reactants_smi)
             if not pred.get("is_hallucination", True):
-                valid.append(pathway)
+                valid.append(normalized_pathway)
 
         return 200, valid
 

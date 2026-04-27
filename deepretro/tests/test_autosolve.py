@@ -145,6 +145,17 @@ class TestBuildMlChecker:
         assert len(kept) == 2
 
     @patch("deepretro.utils.utils_molecule.is_valid_smiles", return_value=True)
+    def test_normalizes_single_string_pathways(self, _mock_valid) -> None:
+        mock_clf = MagicMock()
+        mock_clf.predict_single.return_value = {
+            "is_hallucination": False, "probability": 0.1,
+        }
+        checker = build_ml_checker(mock_clf)
+        status, kept = checker(BENZENE, ["CCO"])
+        assert status == 200
+        assert kept == [["CCO"]]
+
+    @patch("deepretro.utils.utils_molecule.is_valid_smiles", return_value=True)
     def test_drops_hallucinated_pathways(self, _mock_valid) -> None:
         mock_clf = MagicMock()
         mock_clf.predict_single.side_effect = [
