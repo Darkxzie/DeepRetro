@@ -7,12 +7,23 @@ infrastructure.
 
 from __future__ import annotations
 
+import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+mock_llm_module = types.ModuleType("deepretro.algorithms.llm")
+mock_llm_module.llm_pipeline = lambda **kwargs: ([], [], [])
+sys.modules.setdefault("deepretro.algorithms.llm", mock_llm_module)
+
+mock_az_module = types.ModuleType("deepretro.utils.az")
+mock_az_module.run_az = lambda smiles, az_model="USPTO": (False, [])
+sys.modules.setdefault("deepretro.utils.az", mock_az_module)
+
 from deepretro.algorithms.autosolve import AutoSolver
+from deepretro.logging import logger as context_logger
 from deepretro.models.hallucination_helpers import (
     build_ml_checker,
     resolve_hallucination,
@@ -166,3 +177,74 @@ class TestBuildMlChecker:
         status, kept = checker(BENZENE, [["CC"], ["O"]])
         assert status == 200
         assert kept == []
+
+
+class TestAutoSolverRecurse:
+    """Regression tests for recurse branch handling."""
+
+    def test_recurse_keeps_candidate_pathways_isolated(self, monkeypatch) -> None:
+        solver = AutoSolver(hallucination_mode="none")
+        token = context_logger.set(MagicMock())
+        root = "C1CC1"
+        solved_a = "CC"
+        solved_c = "O"
+
+        def fake_run_az(smiles: str, az_model: str = "USPTO"):
+            if smiles in {solved_a, solved_c}:
+                return True, [{"type": "mol", "smiles": smiles, "children": []}]
+            return False, []
+
+        def fake_llm_pipeline(**kwargs):
+            molecule = kwargs["molecule"]
+            if molecule == root:
+                return [[solved_a, root], [solved_c]], ["bad", "good"], [0.2, 0.9]
+            return [["fallback"]], ["fallback"], [0.1]
+
+        monkeypatch.setattr("deepretro.algorithms.autosolve.run_az", fake_run_az)
+        monkeypatch.setattr(
+            "deepretro.algorithms.autosolve.llm_pipeline", fake_llm_pipeline
+        )
+
+        try:
+            tree, solved = solver.recurse(root)
+        finally:
+            context_logger.reset(token)
+
+        assert solved is True
+        children = tree["children"][0]["children"]
+        assert [child["smiles"] for child in children] == [solved_c]
+
+    def test_recurse_uses_branch_local_visited_state(self, monkeypatch) -> None:
+        solver = AutoSolver(hallucination_mode="none")
+        token = context_logger.set(MagicMock())
+        root = "C1CC1"
+        branch_x = "CC"
+        branch_y = "CCC"
+        shared = "O"
+
+        def fake_run_az(smiles: str, az_model: str = "USPTO"):
+            if smiles == shared:
+                return True, [{"type": "mol", "smiles": shared, "children": []}]
+            return False, []
+
+        def fake_llm_pipeline(**kwargs):
+            molecule = kwargs["molecule"]
+            if molecule == root:
+                return [[branch_x, branch_y]], ["branch"], [0.9]
+            if molecule in {branch_x, branch_y}:
+                return [[shared]], ["shared"], [0.8]
+            return [["fallback"]], ["fallback"], [0.1]
+
+        monkeypatch.setattr("deepretro.algorithms.autosolve.run_az", fake_run_az)
+        monkeypatch.setattr(
+            "deepretro.algorithms.autosolve.llm_pipeline", fake_llm_pipeline
+        )
+
+        try:
+            tree, solved = solver.recurse(root)
+        finally:
+            context_logger.reset(token)
+
+        assert solved is True
+        children = tree["children"][0]["children"]
+        assert [child["smiles"] for child in children] == [branch_x, branch_y]
