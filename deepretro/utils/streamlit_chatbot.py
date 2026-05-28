@@ -9,7 +9,7 @@ from typing import Any
 
 
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_OPENROUTER_MODEL = "openrouter/free"
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash:free"
 DEFAULT_SYSTEM_PROMPT = (
     "You are DeepRetro Chat, a concise assistant for retrosynthesis and "
     "chemistry software questions. Be direct, careful, and practical."

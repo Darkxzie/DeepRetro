@@ -29,13 +29,13 @@ def test_resolve_chatbot_settings_strips_environment_whitespace() -> None:
     settings = resolve_chatbot_settings(
         environ={
             "OPENROUTER_API_KEY": " env-key\n",
-            "OPENROUTER_MODEL": " openrouter/free ",
+            "OPENROUTER_MODEL": " deepseek/deepseek-v4-flash:free ",
         },
         secrets={},
     )
 
     assert settings.api_key == "env-key"
-    assert settings.model == "openrouter/free"
+    assert settings.model == "deepseek/deepseek-v4-flash:free"
 
 
 def test_resolve_chatbot_settings_falls_back_to_streamlit_secrets() -> None:
@@ -52,6 +52,12 @@ def test_resolve_chatbot_settings_falls_back_to_streamlit_secrets() -> None:
     assert settings.base_url == "https://openrouter.ai/api/v1"
 
 
+def test_resolve_chatbot_settings_uses_concrete_free_default_model() -> None:
+    settings = resolve_chatbot_settings(environ={}, secrets={})
+
+    assert settings.model == "deepseek/deepseek-v4-flash:free"
+
+
 def test_resolve_chatbot_settings_ignores_unreadable_streamlit_secrets() -> None:
     class MissingSecrets:
         def get(self, name: str) -> str:
@@ -63,7 +69,7 @@ def test_resolve_chatbot_settings_ignores_unreadable_streamlit_secrets() -> None
     )
 
     assert settings.api_key == "env-key"
-    assert settings.model == "openrouter/free"
+    assert settings.model == "deepseek/deepseek-v4-flash:free"
 
 
 def test_build_openrouter_messages_keeps_supported_chat_roles() -> None:
