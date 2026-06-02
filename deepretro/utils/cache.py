@@ -13,6 +13,7 @@ single ``CacheManager`` instance is not thread-safe.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import pickle
@@ -26,11 +27,13 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 _MISS = object()
+_FUNCTION_CACHE: "CacheManager | None" = None
 
 __all__ = [
     "CacheEntry",
     "CacheManager",
     "CacheStats",
+    "cache_results",
     "make_args_hash",
     "make_cache_key",
 ]
@@ -94,6 +97,32 @@ class CacheEntry:
     value: Any
     expires_at: float | None
     tag: str | None
+
+
+def _get_function_cache() -> "CacheManager":
+    """Return the shared process-local cache used by ``cache_results``."""
+    global _FUNCTION_CACHE
+    if _FUNCTION_CACHE is None:
+        _FUNCTION_CACHE = CacheManager()
+    return _FUNCTION_CACHE
+
+
+def cache_results(func):
+    """Cache repeated calls in a shared process-local package cache."""
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any):
+        cache = _get_function_cache()
+        cache_key = make_cache_key(func.__name__, *args, **kwargs)
+        cached = cache.get(cache_key, default=_MISS)
+        if cached is not _MISS:
+            return cached
+
+        result = func(*args, **kwargs)
+        cache.set(cache_key, result)
+        return result
+
+    return wrapper
 
 
 def make_args_hash(*args: Any, **kwargs: Any) -> str:
