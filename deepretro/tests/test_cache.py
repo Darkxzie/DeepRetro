@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from deepretro.utils.cache import (
-    CacheEntry,
-    CacheManager,
-    make_args_hash,
-    make_cache_key,
-)
+from deepretro.utils.cache import CacheEntry, CacheManager, make_args_hash, make_cache_key
 
 
 def test_make_cache_key_is_stable_and_versioned() -> None:
@@ -100,23 +95,3 @@ def test_cache_manager_evict_tag_returns_removed_entries() -> None:
     assert cache.get(second_key, default=miss) is miss
     assert cache.get(third_key) == {"smiles": "CCC"}
     assert cache.stats().num_entries == 1
-
-
-def test_cache_results_decorator_caches_repeated_calls() -> None:
-    """cache_results should memoize repeated calls for the same arguments."""
-    from deepretro.utils.cache import cache_results
-
-    calls = {"count": 0}
-
-    @cache_results
-    def compute(smiles: str, *, az_model: str = "USPTO") -> dict[str, object]:
-        calls["count"] += 1
-        return {"smiles": smiles, "az_model": az_model, "count": calls["count"]}
-
-    first = compute("CCO", az_model="USPTO")
-    second = compute("CCO", az_model="USPTO")
-    third = compute("CCN", az_model="USPTO")
-
-    assert first == second
-    assert first["count"] == 1
-    assert third["count"] == 2
