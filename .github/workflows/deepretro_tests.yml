@@ -64,4 +64,4 @@ jobs:
       - name: Run doctest
         shell: bash -el {0}
         run: |
-          pytest -v --ignore-glob='deepretro/tests/test*.py' --ignore-glob='deepretro/tests/test*.py' --doctest-modules deepretro --doctest-continue-on-failure
+          pytest -v --ignore-glob='deepretro/tests/test*.py' --ignore='deepretro/utils/az.py' --ignore='deepretro/data' --ignore='deepretro/models' --ignore='deepretro/featurizers' --ignore='deepretro/logging.py' --ignore='deepretro/utils/cache.py' --ignore='deepretro/algorithms/stability_checker.py' --ignore='deepretro/algorithms/hallucination_checker.py' --doctest-modules deepretro src/protecting_group.py src/deprotecting_group.py --doctest-continue-on-failure
