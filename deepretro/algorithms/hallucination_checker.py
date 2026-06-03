@@ -572,7 +572,7 @@ def get_substituent_signature(
     --------
     >>> from rdkit import Chem
     >>> mol = Chem.MolFromSmiles("c1ccc(O)cc1")  # phenol
-    >>> subst = {"atoms": [4]}  # the oxygen atom
+    >>> subst = {"atoms": [6]}  # the oxygen atom
     >>> get_substituent_signature(mol, subst)
     'O1'
     """

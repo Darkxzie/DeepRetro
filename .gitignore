@@ -2,7 +2,6 @@ cache_*/
 __pycache__/
 .DS_Store
 .env*
-.streamlit/secrets.toml
 aizynthfinder/
 *.pkl
 pistachio/
